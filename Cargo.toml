@@ -8,4 +8,12 @@ edition = "2021"
 [dependencies]
 actix-web = "4.2.1"
 serde = { version = "1.0.150", features = ["derive"] }
-sqlx = { version = "0.6.2", features = ["runtime-actix-rustls", "mysql"] }
+sqlx = { version = "0.6.2", features = ["runtime-actix-rustls", "mysql", "macros"] }
+futures = "0.3.25"
+
+[package.metadata.scripts]
+test = "echo Test"
+db_create = "bash ./scripts/create_db.sh"
+db_start = "docker start sqlx_demo"
+db_stop = "docker stop sqlx_demo"
+db_remove = "docker rm sqlx_demo"
