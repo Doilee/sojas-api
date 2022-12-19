@@ -1,8 +1,8 @@
 #!/bin/bash
 docker run --name sqlx_demo \
        -p 3306:3306 \
-       -e MARIADB_ROOT_USER=admin \
+       -e MARIADB_ROOT_USER=user \
        -e MARIADB_ROOT_PASSWORD=password \
-       -e MARIADB_DATABASE=sqlx_demo \
-       -v $PWD/init.sql:/docker-entrypoint-initdb.d/init.sql \
+       -e MARIADB_DATABASE=sqlxdemo \
+       -v $PWD/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql \
        -d mariadb:latest
