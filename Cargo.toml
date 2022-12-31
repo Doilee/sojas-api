@@ -12,7 +12,7 @@ sqlx = { version = "0.6.2", features = ["runtime-actix-rustls", "mysql", "macros
 futures = "0.3.25"
 
 [package.metadata.scripts]
-test = "echo Test"
+env = "echo && echo 'set DATABASE_URL 'mysql://user:password@127.0.0.1:3306/sqlxdemo'' && echo"
 db_create = "bash ./scripts/create_db.sh"
 db_start = "docker start sqlx_demo"
 db_stop = "docker stop sqlx_demo"
