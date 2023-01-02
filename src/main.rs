@@ -11,6 +11,18 @@ struct AppState {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+struct Thing {
+    id: u64,
+    i_8: i8,
+    i_16: i16,
+    i_32: i32,
+    i_64: i64,
+    f: f32,
+    f_double: f64,
+    string: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct User {
     id: i32,
     username: String,
@@ -67,6 +79,7 @@ async fn main() -> std::io::Result<()> {
             .route("/create", web::post().to(create_user))
             .route("/patch", web::patch().to(patch_user))
             .route("/delete", web::delete().to(delete_user))
+            .route("/demo", web::get().to(demo))
     }).bind(("127.0.0.1", 4000))?
         .run()
         .await
@@ -76,6 +89,15 @@ async fn root() -> HttpResponse {
     HttpResponse::Ok().json(Response {
         message: "Server is up and running.".to_string(),
     })
+}
+
+async fn demo(app_state: web::Data<AppState>) -> HttpResponse {
+    let things: Vec<Thing> = sqlx::query_as!(
+        Thing,
+        "SELECT * FROM things",
+    ).fetch_all(&app_state.pool).await.unwrap();
+
+    HttpResponse::Ok().json(things)
 }
 
 async fn get_user(path: web::Path<i32>, app_state: web::Data<AppState>) -> HttpResponse {
