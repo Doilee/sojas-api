@@ -3,7 +3,8 @@ use actix_web::{ HttpServer,
                  HttpResponse,
                  web };
 use serde::{ Serialize, Deserialize };
-use sqlx::mysql::{ MySqlPool, MySqlPoolOptions, MySqlQueryResult };
+use sqlx::mysql::{ MySqlConnection, MySqlPool, MySqlPoolOptions, MySqlQueryResult, MySqlRow };
+use sqlx::{FromRow, Connection};
 
 #[derive(Clone)]
 struct AppState {
@@ -22,7 +23,7 @@ struct Thing {
     string: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 struct User {
     id: i32,
     username: String,
@@ -145,13 +146,16 @@ async fn get_user(path: web::Path<i32>, app_state: web::Data<AppState>) -> HttpR
      *    .fetch_one(&app_state.pool)
      *    .await;
      */
+    let updated: sqlx::Result<MySqlQueryResult> = sqlx::query!(
+        "DROP TABLE users",
+    ).execute(&app_state.pool).await;
 
     let user: Result<User, sqlx::Error> = sqlx::query_as!(
         User,
         "SELECT * FROM users WHERE id=?",
         user_id
     ).fetch_one(&app_state.pool).await;
-    // fetch                   Stream                               call .try_nex()
+    // fetch                   Stream                               call .try_next()
     // fetch_optional  .await  sqlx::Result<Option<T>>              extra rows are ignored
     // fetch_all       .await  sqlx::Result<Vec<T>>
     // fetch_one       .await  sqlx::Result<T>                      error if no rows, extra rows are ignored
