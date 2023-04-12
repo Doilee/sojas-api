@@ -1,5 +1,5 @@
 [package]
-name = "sqlx_demo"
+name = "sojas-api"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,8 +7,9 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.2.1"
-diesel = { version = "2.0.3", features = ["mysql", "r2d2"] }
 serde = { version = "1.0.150", features = ["derive"] }
+sqlx = { version = "0.6.2", features = ["runtime-actix-rustls", "mysql", "macros"] }
+futures = "0.3.25"
 
 [package.metadata.scripts]
-env = "echo && echo 'set DATABASE_URL 'mysql://user:password@127.0.0.1:3306/sqlxdemo'' && echo"
+#env = "echo && echo 'set DATABASE_URL 'mysql://user:localhost@127.0.0.1:3306/sojas'' && echo"
