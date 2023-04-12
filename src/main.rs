@@ -1,6 +1,7 @@
 mod users;
 mod events;
 
+use std::{env, fs};
 use actix_web::{HttpServer, App, HttpResponse, get, web};
 use serde::{ Serialize, Deserialize };
 use sqlx::mysql::{ MySqlPool, MySqlPoolOptions };
@@ -20,14 +21,23 @@ struct DataResponse<Data> {
     data: Data,
     message: Option<String>,
 }
+fn set_env() {
+    let file = fs::read_to_string(".env").unwrap();
+
+    for var in file.split("\n").into_iter() {
+        let key_value : Vec<&str> = var.split("=").collect();
+
+        env::set_var(key_value[0], key_value[1]);
+    }
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // let _database_url: String = env::var("DATABASE_URL").unwrap();
-    const DATABASE_URL: &str = "mysql://root:localhost@127.0.0.1:3306/sojas_api";
+    set_env();
+
     let pool: MySqlPool = MySqlPoolOptions::new()
         .max_connections(10)
-        .connect(DATABASE_URL)
+        .connect(&*env::var("DATABASE_URL").unwrap())
         .await
         .unwrap();
 
