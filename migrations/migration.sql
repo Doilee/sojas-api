@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users(
 
 CREATE TABLE IF NOT EXISTS events(
     id INT UNSIGNED,
+    cached_results JSON NULL,
     PRIMARY KEY(id)
 );
 
@@ -19,6 +20,16 @@ CREATE TABLE IF NOT EXISTS participants(
 );
 
 CREATE TABLE IF NOT EXISTS merch(
+    id INT UNSIGNED,
+    image_url VARCHAR(255) NULL,
+    image_srcset TEXT NULL,
+    title VARCHAR(255),
+    `description` TEXT NULL,
+    price INT UNSIGNED DEFAULT 0,
+    PRIMARY KEY(id)
+);
+
+CREATE TABLE IF NOT EXISTS main_site_cache(
     id INT UNSIGNED,
     image_url VARCHAR(255) NULL,
     image_srcset TEXT NULL,

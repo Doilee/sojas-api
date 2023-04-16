@@ -17,8 +17,8 @@ struct Response {
 }
 
 #[derive(Serialize, Deserialize)]
-struct DataResponse<Data> {
-    data: Data,
+struct DataResponse<T> {
+    data: T,
     message: Option<String>,
 }
 fn set_env() {
@@ -49,7 +49,7 @@ async fn main() -> std::io::Result<()> {
             .service(root)
             .service(users::get)
             .service(users::get_all)
-            .service(events::index)
+            .service(events::all_events)
             //.service(vents::)
     }).bind(("127.0.0.1", 4000))?
         .run()
