@@ -2,6 +2,7 @@ use std::env;
 use std::ops::Deref;
 use actix_web::{delete, get, HttpRequest, HttpResponse, post, put, web};
 use actix_web::web::{Data, Query};
+use futures::future::err;
 use futures::StreamExt;
 use serde::{Serialize, Deserialize, Deserializer};
 use serde_json::Map;
@@ -28,49 +29,6 @@ struct DatabaseResult {
     id: u32,
     cached_results: Option<JsonValue>,
     user_id: Option<u32>,
-}
-
-fn convert_results_to_events(results: Vec<DatabaseResult>) -> Vec<Event> {
-    let mut event_list: Vec<Event> = Vec::new();
-
-    for result in results {
-        let event: Option<&mut Event> = event_list.iter_mut().find(|e| e.id == result.id);
-
-        match event {
-            Some(event) => {
-                if result.user_id.is_some() {
-                    event.participants.push(Participant { user_id: result.user_id.unwrap() });
-                }
-            },
-            None => {
-                let mut new_event = Event {
-                    id: result.id,
-                    cached_results: result.cached_results,
-                    participants: vec![],
-                };
-
-                if result.user_id.is_some() {
-                    new_event.participants.push(Participant { user_id: result.user_id.unwrap() });
-                }
-
-                event_list.push(new_event);
-            }
-        }
-    }
-
-    event_list
-}
-
-pub async fn cached_events(app_state: web::Data<AppState>) -> HttpResponse {
-    let results: Vec<DatabaseResult> = sqlx::query_as!(
-        DatabaseResult,
-        "SELECT id, cached_results, user_id FROM events LEFT JOIN participants ON participants.event_id = events.id",
-    ).fetch_all(&app_state.pool).await.unwrap();
-
-    HttpResponse::Ok().json(DataResponse {
-        data: convert_results_to_events(results),
-        message: Option::from("Got all cached events.".to_string()),
-    })
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -117,11 +75,9 @@ struct PinkPolitiekEvent {
     venue: PinkPolitiekVenueOrVec,
 }
 
-type PinkPolitiekEvents = Vec<PinkPolitiekEvent>;
-
 #[derive(Serialize, Deserialize)]
 struct PinkPolitiekEventsData {
-    events: PinkPolitiekEvents,
+    events: Vec<PinkPolitiekEvent>,
     rest_url: String,
     total: i32,
     total_pages: i32,
@@ -144,17 +100,51 @@ pub async fn all_events(app_state: Data<AppState>, req: HttpRequest) -> HttpResp
     let events = fetch_events_from_pink_politiek().await;
 
     for event in &events.events {
-        sqlx::query!(
-            "UPDATE events SET cached_results = ? WHERE id = ?",
+        let result = sqlx::query!(
+            "INSERT INTO events (id, cached_results) VALUES(?, ?) AS new ON DUPLICATE KEY UPDATE cached_results = new.cached_results",
+            event.id,
             serde_json::to_string(&event).unwrap(),
-            event.id
-        ).execute(&app_state.pool);
+        ).execute(&app_state.pool).await;
+
+        if result.is_err() {
+            return actix_web::error::ErrorInternalServerError("Something went wrong.").error_response()
+        }
     }
 
     HttpResponse::Ok().json(DataResponse {
         data: events,
         message: Option::from("Got all events.".to_string()),
     })
+}
+
+async fn cached_events(app_state: web::Data<AppState>) -> HttpResponse {
+    let results: Vec<DatabaseResult> = sqlx::query_as!(
+        DatabaseResult,
+        "SELECT id, cached_results, user_id FROM events LEFT JOIN participants ON participants.event_id = events.id",
+    ).fetch_all(&app_state.pool).await.unwrap();
+
+    HttpResponse::Ok().json(DataResponse {
+        data: convert_results_to_events(results),
+        message: Option::from("Got all cached events.".to_string()),
+    })
+}
+
+fn convert_results_to_events(results: Vec<DatabaseResult>) -> Vec<Event> {
+    let mut event_map: std::collections::HashMap<u32, Event> = std::collections::HashMap::new();
+
+    for result in results {
+        let event = event_map.entry(result.id).or_insert_with(|| Event {
+            id: result.id,
+            cached_results: result.cached_results,
+            participants: vec![],
+        });
+
+        if let Some(user_id) = result.user_id {
+            event.participants.push(Participant { user_id });
+        }
+    }
+
+    event_map.into_iter().map(|(_, event)| event).collect()
 }
 
 async fn fetch_events_from_pink_politiek() -> PinkPolitiekEventsData {
