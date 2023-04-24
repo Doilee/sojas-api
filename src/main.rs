@@ -1,5 +1,6 @@
 mod users;
 mod events;
+mod jwt;
 
 use std::{env, fs};
 use actix_web::{HttpServer, App, HttpResponse, get, web};

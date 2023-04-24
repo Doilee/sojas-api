@@ -11,6 +11,7 @@ use sqlx::FromRow;
 use sqlx::mysql::MySqlQueryResult;
 use sqlx::types::JsonValue;
 use crate::{AppState, DataResponse};
+use crate::jwt::Claims;
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
 struct Participant {
