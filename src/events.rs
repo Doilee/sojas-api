@@ -11,7 +11,7 @@ use sqlx::FromRow;
 use sqlx::mysql::MySqlQueryResult;
 use sqlx::types::JsonValue;
 use crate::{AppState, DataResponse};
-use crate::jwt::Claims;
+use crate::jwt::User;
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
 struct Participant {
@@ -90,7 +90,7 @@ struct IndexParams {
 }
 
 #[get("/events")]
-pub async fn all_events(app_state: Data<AppState>, req: HttpRequest) -> HttpResponse {
+pub async fn all_events(app_state: Data<AppState>, req: HttpRequest, user: User) -> HttpResponse {
     let params = web::Query::<IndexParams>::from_query(req.query_string())
         .unwrap_or(web::Query(IndexParams { cached: false }));
 
