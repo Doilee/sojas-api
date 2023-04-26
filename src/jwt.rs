@@ -9,13 +9,6 @@ use reqwest::header::AUTHORIZATION;
 use reqwest::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
 
-// Define a struct to hold the JWT token
-#[derive(Deserialize, Serialize)]
-pub struct Claims {
-    sub: String,
-    exp: usize,
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 enum Role {
@@ -75,21 +68,6 @@ impl FromRequest for User {
         return Box::pin(async {
             Err(ErrorUnauthorized("Unauthorized"))
         });
-
-        // if let Some(auth_header) = req.headers().get("authorization") {
-        //
-        //     return check_token_on_pinkpolitiek(auth_header.to_str().unwrap());
-
-            // let token = auth_header.to_str().unwrap().replace("Bearer ", "");
-
-            // let decoding_key = DecodingKey::from_secret("my_secret_key".as_ref());
-
-            // match decode::<Claims>(&token, &decoding_key, &Validation::default()) {
-            //     Ok(token_data) => return ok(token_data.claims),
-            //     Err(_) => return err(actix_web::error::ErrorUnauthorized("Invalid token")),
-            // }
-        // }
-        // err(actix_web::error::ErrorUnauthorized("Authorization header not found"))
     }
 }
 
