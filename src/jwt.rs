@@ -1,9 +1,8 @@
 use std::env;
 use std::future::Future;
-use std::num::NonZeroI16;
 use std::pin::Pin;
 use actix_web::{Error, FromRequest, HttpRequest};
-use actix_web::error::ErrorUnauthorized;
+use actix_web::error::{ErrorInternalServerError, ErrorUnauthorized};
 use futures::future::{err, ok, Ready};
 use reqwest::header::AUTHORIZATION;
 use reqwest::{Response, StatusCode};
@@ -12,20 +11,13 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 enum Role {
-    Guest,
-    User,
+    Member,
     Admin,
 }
 
-impl Default for Role {
-    fn default() -> Self {
-        Role::Guest
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
-    id: String,
+    pub id: String,
     first_name: Option<String>,
     last_name: Option<String>,
     role: Role,
@@ -38,46 +30,46 @@ impl FromRequest for User {
     // type Config = ();
 
     fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
-        if let Some(auth_header) = req.headers().get(AUTHORIZATION) {
-            let token = auth_header.to_str().unwrap().replace("Bearer ", "");
-
-            return Box::pin(async move {
-                return match validate_token(&token).await {
-                    Ok(response) => {
-                        return match response.status() {
-                            StatusCode::OK => {
-                                Ok(User {
-                                    id: "1".to_string(),
-                                    first_name: Option::from("Matthijs".to_string()),
-                                    last_name: Option::from("Dam".to_string()),
-                                    role: Role::Admin
-                                })
-                            },
-                            _ => {
-                                Err(ErrorUnauthorized("Token invalid."))
-                            }
-                        }
-                    },
-                    Err(error) => {
-                        Err(ErrorUnauthorized("Could not validate token."))
-                    }
-                }
+        if req.headers().get(AUTHORIZATION) == None {
+            return Box::pin(async {
+                Err(ErrorUnauthorized("Please provide an authorization token."))
             });
         }
 
-        return Box::pin(async {
-            Err(ErrorUnauthorized("Unauthorized"))
+        let token = req.headers().get(AUTHORIZATION)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .replace("Bearer ", "");
+
+        return Box::pin(async move {
+            return match validate_token(&token).await {
+                Ok(response) => {
+                    return match response.status() {
+                        StatusCode::OK => {
+                            Ok(User {
+                                id: "1".to_string(),
+                                first_name: Option::from("Matthijs".to_string()),
+                                last_name: Option::from("Dam".to_string()),
+                                role: Role::Member
+                            })
+                        },
+                        _ => {
+                            Err(ErrorUnauthorized("Token invalid."))
+                        }
+                    }
+                },
+                Err(error) => {
+                    Err(ErrorInternalServerError("Could not validate token."))
+                }
+            }
         });
     }
 }
 
 async fn validate_token(token : &str) -> Result<Response, reqwest::Error> {
-    let api_url: String = env::var("PINKPOLITIEK_URL").unwrap();
-
-    let client = reqwest::Client::new();
-
-    return client
-        .post(api_url + "/wp-json/jwt-auth/v1/token/validate")
+    return reqwest::Client::new()
+        .post(env::var("PINKPOLITIEK_URL").unwrap() + "/jwt-auth/v1/token/validate")
         .header(AUTHORIZATION, token)
         .send()
         .await;
