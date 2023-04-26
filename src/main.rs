@@ -51,6 +51,8 @@ async fn main() -> std::io::Result<()> {
             .service(users::get)
             .service(users::get_all)
             .service(events::all_events)
+            .service(events::participate)
+            .service(events::stop_participating)
             //.service(vents::)
     }).bind(("127.0.0.1", 4000))?
         .run()
