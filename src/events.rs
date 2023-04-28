@@ -5,7 +5,6 @@ use actix_web::error::ErrorInternalServerError;
 use actix_web::web::{Data, Query};
 use futures::future::err;
 use futures::StreamExt;
-use reqwest::StatusCode;
 use serde::{Serialize, Deserialize, Deserializer};
 use serde_json::Map;
 use serde_json::Value::Array;
