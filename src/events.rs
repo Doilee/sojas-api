@@ -1,6 +1,5 @@
 use std::env;
-use std::ops::Deref;
-use actix_web::{delete, get, HttpRequest, HttpResponse, post, put, web};
+use actix_web::{delete, get, HttpRequest, HttpResponse, post, web};
 use actix_web::error::ErrorInternalServerError;
 use actix_web::web::{Data, Query};
 use futures::future::err;
@@ -11,7 +10,7 @@ use serde_json::Value::Array;
 use sqlx::FromRow;
 use sqlx::mysql::MySqlQueryResult;
 use sqlx::types::JsonValue;
-use crate::{AppState, DataResponse, Response};
+use crate::{AppState, Response};
 use crate::jwt::User;
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
@@ -99,23 +98,22 @@ pub async fn all_events(app_state: Data<AppState>, req: HttpRequest) -> HttpResp
         return cached_events(app_state).await;
     }
 
-    let response = reqwest::get(
+    let Ok(response) = reqwest::get(
         env::var("PINKPOLITIEK_URL").unwrap() + "/tribe/events/v1/events"
-    ).await;
-
-    if response.is_err() {
+    ).await else {
         return ErrorInternalServerError("Could not connect to ".to_owned() + &env::var("PINKPOLITIEK_URL")
             .unwrap())
             .error_response();
-    }
+    };
 
     let events = response
         .unwrap()
         .json::<PinkPolitiekEventsData>()
         .await
-        .unwrap();
+        .unwrap()
+        .events;
 
-    for event in &events.events {
+    for event in &events {
         let result = sqlx::query!(
             "INSERT INTO events (id, cached_results) VALUES(?, ?) AS new ON DUPLICATE KEY UPDATE cached_results = new.cached_results",
             event.id,
@@ -127,10 +125,7 @@ pub async fn all_events(app_state: Data<AppState>, req: HttpRequest) -> HttpResp
         }
     }
 
-    HttpResponse::Ok().json(DataResponse {
-        data: events,
-        message: Option::from("Got all events.".to_string()),
-    })
+    HttpResponse::Ok().json(events)
 }
 
 async fn cached_events(app_state: web::Data<AppState>) -> HttpResponse {
@@ -139,10 +134,7 @@ async fn cached_events(app_state: web::Data<AppState>) -> HttpResponse {
         "SELECT id, cached_results, user_id FROM events LEFT JOIN participants ON participants.event_id = events.id",
     ).fetch_all(&app_state.pool).await.unwrap();
 
-    HttpResponse::Ok().json(DataResponse {
-        data: convert_results_to_events(results),
-        message: Option::from("Got all cached events.".to_string()),
-    })
+    HttpResponse::Ok().json(convert_results_to_events(results))
 }
 
 fn convert_results_to_events(results: Vec<DatabaseResult>) -> Vec<Event> {
@@ -169,17 +161,15 @@ pub async fn participate(path: web::Path<u32>, app_state: web::Data<AppState>, u
 
     //todo: Check if user already participated
 
-    let created: Result<MySqlQueryResult, sqlx::Error> = sqlx::query!(
+    let Ok(created): Result<MySqlQueryResult, sqlx::Error> = sqlx::query!(
         "INSERT INTO participants(event_id, user_id) VALUES(?, ?)",
         event_id,
         user.id,
-    ).execute(&app_state.pool).await;
-
-    if created.is_err() {
+    ).execute(&app_state.pool).await else {
         return HttpResponse::InternalServerError().json(Response {
             message: "Couldn't participate to event.".to_string(),
         });
-    }
+    };
 
     HttpResponse::Ok().json(Response {
         message: "Participated to event.".to_string(),
@@ -190,17 +180,15 @@ pub async fn participate(path: web::Path<u32>, app_state: web::Data<AppState>, u
 pub async fn stop_participating(path: web::Path<u32>, app_state: web::Data<AppState>, user: User) -> HttpResponse {
     let event_id: u32 = path.into_inner();
 
-    let deleted: Result<MySqlQueryResult, sqlx::Error> = sqlx::query!(
+    let Ok(deleted): Result<MySqlQueryResult, sqlx::Error> = sqlx::query!(
         "DELETE FROM participants WHERE event_id = ? AND user_id = ?",
         event_id,
         user.id,
-    ).execute(&app_state.pool).await;
-
-    if deleted.is_err() {
+    ).execute(&app_state.pool).await else {
         return HttpResponse::InternalServerError().json(Response {
             message: "Couldn't remove participation.".to_string(),
         });
-    }
+    };
 
     HttpResponse::Ok().json(Response {
         message: "Stopped participating to event.".to_string(),

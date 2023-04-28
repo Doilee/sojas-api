@@ -13,13 +13,11 @@ struct PinkPolitiekUser {
     name: String,
 }
 
-
 #[tokio::main]
 async fn main() -> ExitCode {
     sojas_api::set_env();
 
     let url = env::var("PINKPOLITIEK_URL").unwrap() + "/wp/v2/users?page=1";
-
 
     // let client = reqwest::Client::new();
     //

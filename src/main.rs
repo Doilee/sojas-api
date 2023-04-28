@@ -17,12 +17,6 @@ struct Response {
     message: String,
 }
 
-#[derive(Serialize, Deserialize)]
-struct DataResponse<T> {
-    data: T,
-    message: Option<String>,
-}
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     sojas_api::set_env();
