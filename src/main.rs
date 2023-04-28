@@ -2,7 +2,7 @@ mod users;
 mod events;
 mod jwt;
 
-use std::{env, fs};
+use std::env;
 use actix_web::{HttpServer, App, HttpResponse, get, web};
 use serde::{ Serialize, Deserialize };
 use sqlx::mysql::{ MySqlPool, MySqlPoolOptions };
@@ -22,19 +22,10 @@ struct DataResponse<T> {
     data: T,
     message: Option<String>,
 }
-fn set_env() {
-    let file = fs::read_to_string(".env").unwrap();
-
-    for var in file.split("\n").into_iter() {
-        let key_value : Vec<&str> = var.split("=").collect();
-
-        env::set_var(key_value[0], key_value[1]);
-    }
-}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    set_env();
+    sojas_api::set_env();
 
     let pool: MySqlPool = MySqlPoolOptions::new()
         .max_connections(10)
