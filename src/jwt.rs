@@ -3,7 +3,7 @@ use std::future::Future;
 use std::pin::Pin;
 use actix_web::{Error, FromRequest, HttpRequest};
 use actix_web::error::{ErrorInternalServerError, ErrorUnauthorized};
-use futures::future::{err, ok, Ready};
+
 use reqwest::header::AUTHORIZATION;
 use reqwest::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -30,7 +30,7 @@ impl FromRequest for User {
     // type Config = ();
 
     fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
-        if req.headers().get(AUTHORIZATION) == None {
+        if req.headers().get(AUTHORIZATION).is_none() {
             return Box::pin(async {
                 Err(ErrorUnauthorized("Please provide an authorization token."))
             });
@@ -42,10 +42,10 @@ impl FromRequest for User {
             .unwrap()
             .replace("Bearer ", "");
 
-        return Box::pin(async move {
-            return match validate_token(&token).await {
+        Box::pin(async move {
+            match validate_token(&token).await {
                 Ok(response) => {
-                    return match response.status() {
+                    match response.status() {
                         StatusCode::OK => {
                             Ok(User {
                                 id: "1".to_string(),
@@ -59,18 +59,18 @@ impl FromRequest for User {
                         }
                     }
                 },
-                Err(error) => {
+                Err(_error) => {
                     Err(ErrorInternalServerError("Could not validate token."))
                 }
             }
-        });
+        })
     }
 }
 
 async fn validate_token(token : &str) -> Result<Response, reqwest::Error> {
-    return reqwest::Client::new()
+    reqwest::Client::new()
         .post(env::var("PINKPOLITIEK_URL").unwrap() + "/jwt-auth/v1/token/validate")
         .header(AUTHORIZATION, token)
         .send()
-        .await;
+        .await
 }

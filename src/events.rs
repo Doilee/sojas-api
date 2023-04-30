@@ -1,16 +1,11 @@
 use std::env;
-use std::str::FromStr;
 use actix_web::{delete, get, HttpRequest, HttpResponse, post, web};
 use actix_web::error::ErrorInternalServerError;
 use actix_web::web::{Data};
-use futures::future::err;
-use futures::StreamExt;
-use serde::{Serialize, Deserialize, Deserializer};
-use serde_json::Map;
-use serde_json::Value::Array;
+use serde::{Serialize, Deserialize};
 use sqlx::FromRow;
 use sqlx::mysql::MySqlQueryResult;
-use sqlx::types::JsonValue;
+
 use crate::{AppState, Response};
 use crate::jwt::User;
 
@@ -111,7 +106,7 @@ pub async fn all_events(app_state: Data<AppState>, req: HttpRequest) -> HttpResp
     let params = web::Query::<IndexParams>::from_query(req.query_string())
         .unwrap_or(web::Query(IndexParams { cached: false }));
 
-    if params.cached == true {
+    if params.cached {
         return cached_events(app_state).await;
     }
 
@@ -195,7 +190,7 @@ fn convert_results_to_events(results: Vec<DatabaseResult>) -> Vec<EventModel> {
         }
     }
 
-    event_map.into_iter().map(|(_, event)| event).collect()
+    event_map.into_values().collect()
 }
 
 #[post("/events/{event_id}/participate")]
@@ -204,7 +199,7 @@ pub async fn participate(path: web::Path<u32>, app_state: web::Data<AppState>, u
 
     //todo: Check if user already participated
 
-    let Ok(created): Result<MySqlQueryResult, sqlx::Error> = sqlx::query!(
+    let Ok(_created): Result<MySqlQueryResult, sqlx::Error> = sqlx::query!(
         "INSERT INTO participants(event_id, user_id) VALUES(?, ?)",
         event_id,
         user.id,
@@ -223,7 +218,7 @@ pub async fn participate(path: web::Path<u32>, app_state: web::Data<AppState>, u
 pub async fn stop_participating(path: web::Path<u32>, app_state: web::Data<AppState>, user: User) -> HttpResponse {
     let event_id: u32 = path.into_inner();
 
-    let Ok(deleted): Result<MySqlQueryResult, sqlx::Error> = sqlx::query!(
+    let Ok(_deleted): Result<MySqlQueryResult, sqlx::Error> = sqlx::query!(
         "DELETE FROM participants WHERE event_id = ? AND user_id = ?",
         event_id,
         user.id,

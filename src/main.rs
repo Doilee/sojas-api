@@ -23,7 +23,7 @@ async fn main() -> std::io::Result<()> {
 
     let pool: MySqlPool = MySqlPoolOptions::new()
         .max_connections(10)
-        .connect(&*env::var("DATABASE_URL").unwrap())
+        .connect(&env::var("DATABASE_URL").unwrap())
         .await
         .unwrap();
 
