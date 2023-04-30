@@ -1,7 +1,8 @@
 mod users;
 mod events;
+mod jwt;
 
-use std::{env, fs};
+use std::env;
 use actix_web::{HttpServer, App, HttpResponse, get, web};
 use serde::{ Serialize, Deserialize };
 use sqlx::mysql::{ MySqlPool, MySqlPoolOptions };
@@ -16,24 +17,9 @@ struct Response {
     message: String,
 }
 
-#[derive(Serialize, Deserialize)]
-struct DataResponse<T> {
-    data: T,
-    message: Option<String>,
-}
-fn set_env() {
-    let file = fs::read_to_string(".env").unwrap();
-
-    for var in file.split("\n").into_iter() {
-        let key_value : Vec<&str> = var.split("=").collect();
-
-        env::set_var(key_value[0], key_value[1]);
-    }
-}
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    set_env();
+    sojas_api::set_env();
 
     let pool: MySqlPool = MySqlPoolOptions::new()
         .max_connections(10)
@@ -50,6 +36,8 @@ async fn main() -> std::io::Result<()> {
             .service(users::get)
             .service(users::get_all)
             .service(events::all_events)
+            .service(events::participate)
+            .service(events::stop_participating)
             //.service(vents::)
     }).bind(("127.0.0.1", 4000))?
         .run()
