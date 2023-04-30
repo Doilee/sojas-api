@@ -40,7 +40,7 @@ async fn main() -> ExitCode {
 
             return ExitCode::SUCCESS;
         },
-        // This is actually an unauthorized route
+        // 404 is actually an unauthorized route
         _ => {
             println!("Code: {}\n URL: {}\n Body: {}", response.status(), &url, response.text().await.unwrap());
 

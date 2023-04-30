@@ -6,25 +6,19 @@ use serde::{Serialize, Deserialize};
 use crate::AppState;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-struct PinkPolitiekVenue {
+struct VenueModel {
     id: i32,
-    author: String,
-    status: String,
-    date: String,
-    date_utc: String,
-    modified: String,
-    modified_utc: String,
     url: String,
-    venue: String,
-    slug: String,
+
+    #[serde(rename(deserialize = "venue"))]
+    name: String,
     show_map: bool,
-    show_map_link: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(untagged)]
 enum PinkPolitiekVenueOrVec {
-    Venue(PinkPolitiekVenue),
+    Venue(VenueModel),
     Arr([u8; 0])
 }
 
