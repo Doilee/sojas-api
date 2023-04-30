@@ -7,8 +7,9 @@ use crate::{AppState, Response};
 #[derive(Serialize, Deserialize, FromRow)]
 struct User {
     id: u32,
-    soy_balance: Option<i32>,
-    is_admin: Option<i8>,
+    name: String,
+    soy_balance: i32,
+    is_admin: i8,
 }
 
 #[get("/users/{id}")]
@@ -25,7 +26,7 @@ pub async fn get(path: web::Path<u32>, app_state: web::Data<AppState>) -> HttpRe
         });
     };
 
-    HttpResponse::Ok().json(user.unwrap())
+    HttpResponse::Ok().json(user)
 }
 
 #[get("/users")]

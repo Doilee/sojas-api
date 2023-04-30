@@ -1,4 +1,5 @@
 use std::env;
+use std::str::FromStr;
 use actix_web::{delete, get, HttpRequest, HttpResponse, post, web};
 use actix_web::error::ErrorInternalServerError;
 use actix_web::web::{Data, Query};
@@ -13,22 +14,54 @@ use sqlx::types::JsonValue;
 use crate::{AppState, Response};
 use crate::jwt::User;
 
+#[derive(Serialize, Deserialize, Clone, sqlx::Type)]
+#[serde(rename_all = "lowercase")]
+enum Source {
+    Local,
+    External,
+}
+
+impl FromStr for Source {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<Source, Self::Err> {
+        match input {
+            "local"    => Ok(Source::Local),
+            "external" => Ok(Source::External),
+            _          => Err(()),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Copy, Clone)]
-struct Participant {
+struct ParticipantModel {
     user_id: u32,
 }
 
 #[derive(Serialize, Deserialize, FromRow, Clone)]
-struct Event {
+struct EventModel {
     id: u32,
-    cached_results: Option<JsonValue>,
-    participants: Vec<Participant>
+    region_id: Option<u32>,
+    title: String,
+    description: Option<String>,
+    reward: i32,
+    source: Source,
+    url: Option<String>,
+    image_url: Option<String>,
+    participants: Vec<ParticipantModel>
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
 struct DatabaseResult {
     id: u32,
-    cached_results: Option<JsonValue>,
+    region_id: Option<u32>,
+    title: String,
+    description: Option<String>,
+    reward: i32,
+    source: String,
+    url: Option<String>,
+    image_url: Option<String>,
+    image_srcset: Option<String>,
     user_id: Option<u32>,
 }
 
@@ -98,13 +131,15 @@ pub async fn all_events(app_state: Data<AppState>, req: HttpRequest) -> HttpResp
         return cached_events(app_state).await;
     }
 
-    let Ok(response) = reqwest::get(
+    let response = reqwest::get(
         env::var("PINKPOLITIEK_URL").unwrap() + "/tribe/events/v1/events"
-    ).await else {
+    ).await;
+
+    if response.is_err() {
         return ErrorInternalServerError("Could not connect to ".to_owned() + &env::var("PINKPOLITIEK_URL")
             .unwrap())
             .error_response();
-    };
+    }
 
     let events = response
         .unwrap()
@@ -114,10 +149,14 @@ pub async fn all_events(app_state: Data<AppState>, req: HttpRequest) -> HttpResp
         .events;
 
     for event in &events {
-        let result = sqlx::query!(
-            "INSERT INTO events (id, cached_results) VALUES(?, ?) AS new ON DUPLICATE KEY UPDATE cached_results = new.cached_results",
+        let result = sqlx::query!(r#"
+            INSERT INTO events (id, title, description, source, url)
+            VALUES(?, ?, ?, 'external', ?) AS n ON DUPLICATE KEY UPDATE
+            title = n.title, description = n.description, source = n.source, url = n.url"#,
             event.id,
-            serde_json::to_string(&event).unwrap(),
+            event.title,
+            event.description,
+            event.url,
         ).execute(&app_state.pool).await;
 
         if result.is_err() {
@@ -131,24 +170,30 @@ pub async fn all_events(app_state: Data<AppState>, req: HttpRequest) -> HttpResp
 async fn cached_events(app_state: web::Data<AppState>) -> HttpResponse {
     let results: Vec<DatabaseResult> = sqlx::query_as!(
         DatabaseResult,
-        "SELECT id, cached_results, user_id FROM events LEFT JOIN participants ON participants.event_id = events.id",
+        "SELECT events.*, participants.user_id FROM events LEFT JOIN participants ON participants.event_id = events.id",
     ).fetch_all(&app_state.pool).await.unwrap();
 
     HttpResponse::Ok().json(convert_results_to_events(results))
 }
 
-fn convert_results_to_events(results: Vec<DatabaseResult>) -> Vec<Event> {
-    let mut event_map: std::collections::HashMap<u32, Event> = std::collections::HashMap::new();
+fn convert_results_to_events(results: Vec<DatabaseResult>) -> Vec<EventModel> {
+    let mut event_map: std::collections::HashMap<u32, EventModel> = std::collections::HashMap::new();
 
     for result in results {
-        let event = event_map.entry(result.id).or_insert_with(|| Event {
+        let event = event_map.entry(result.id).or_insert_with(|| EventModel {
             id: result.id,
-            cached_results: result.cached_results,
+            region_id: result.region_id,
+            title: result.title,
+            description: result.description,
+            reward: result.reward,
+            source: Source::from_str(&result.source).unwrap(),
+            url: result.url,
+            image_url: result.image_url,
             participants: vec![],
         });
 
         if let Some(user_id) = result.user_id {
-            event.participants.push(Participant { user_id });
+            event.participants.push(ParticipantModel { user_id });
         }
     }
 
