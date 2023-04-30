@@ -44,58 +44,6 @@ struct EventModel {
     participants: Vec<ParticipantModel>
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-struct PinkPolitiekVenue {
-    id: i32,
-    author: String,
-    status: String,
-    date: String,
-    date_utc: String,
-    modified: String,
-    modified_utc: String,
-    url: String,
-    venue: String,
-    slug: String,
-    show_map: bool,
-    show_map_link: bool,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(untagged)]
-enum PinkPolitiekVenueOrVec {
-    Venue(PinkPolitiekVenue),
-    Arr([u8; 0])
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-struct PinkPolitiekEvent {
-    id: i32,
-    global_id: String,
-    author: String,
-    status: String,
-    date: String,
-    date_utc: String,
-    modified: String,
-    modified_utc: String,
-    url: String,
-    rest_url: String,
-    title: String,
-    description: String,
-    excerpt: String,
-    slug: String,
-    all_day: bool,
-    start_date: String,
-    venue: PinkPolitiekVenueOrVec,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct PinkPolitiekEventsData {
-    events: Vec<PinkPolitiekEvent>,
-    rest_url: String,
-    total: i32,
-    total_pages: i32,
-}
-
 #[derive(Serialize, Deserialize)]
 struct IndexParams {
     cached: bool
@@ -110,40 +58,10 @@ pub async fn all_events(app_state: Data<AppState>, req: HttpRequest) -> HttpResp
         return cached_events(app_state).await;
     }
 
-    let response = reqwest::get(
-        env::var("PINKPOLITIEK_URL").unwrap() + "/tribe/events/v1/events"
-    ).await;
-
-    if response.is_err() {
-        return ErrorInternalServerError("Could not connect to ".to_owned() + &env::var("PINKPOLITIEK_URL")
-            .unwrap())
-            .error_response();
+    match crate::pinkpolitiek_api::get_events(app_state).await {
+        Ok(events) => HttpResponse::Ok().json(events),
+        Err(message) => ErrorInternalServerError(message).error_response()
     }
-
-    let events = response
-        .unwrap()
-        .json::<PinkPolitiekEventsData>()
-        .await
-        .unwrap()
-        .events;
-
-    for event in &events {
-        let result = sqlx::query!(r#"
-            INSERT INTO events (id, title, description, source, url)
-            VALUES(?, ?, ?, 'external', ?) AS n ON DUPLICATE KEY UPDATE
-            title = n.title, description = n.description, source = n.source, url = n.url"#,
-            event.id,
-            event.title,
-            event.description,
-            event.url,
-        ).execute(&app_state.pool).await;
-
-        if result.is_err() {
-            return ErrorInternalServerError("Something went wrong.").error_response()
-        }
-    }
-
-    HttpResponse::Ok().json(events)
 }
 
 #[derive(Serialize, Deserialize, FromRow)]

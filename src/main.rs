@@ -1,6 +1,7 @@
 mod users;
 mod events;
 mod jwt;
+mod pinkpolitiek_api;
 
 use std::env;
 use actix_web::{HttpServer, App, HttpResponse, get, web};
