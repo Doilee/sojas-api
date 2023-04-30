@@ -2,8 +2,6 @@ extern crate sojas_api;
 
 use std::env;
 use std::process::{ExitCode};
-use actix_web::HttpMessage;
-use reqwest::header::AUTHORIZATION;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 

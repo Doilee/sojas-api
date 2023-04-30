@@ -2,7 +2,7 @@ use std::env;
 use std::str::FromStr;
 use actix_web::{delete, get, HttpRequest, HttpResponse, post, web};
 use actix_web::error::ErrorInternalServerError;
-use actix_web::web::{Data, Query};
+use actix_web::web::{Data};
 use futures::future::err;
 use futures::StreamExt;
 use serde::{Serialize, Deserialize, Deserializer};
@@ -21,14 +21,12 @@ enum Source {
     External,
 }
 
-impl FromStr for Source {
-    type Err = ();
-
-    fn from_str(input: &str) -> Result<Source, Self::Err> {
+impl Source {
+    fn from_str(input: &str) -> Source {
         match input {
-            "local"    => Ok(Source::Local),
-            "external" => Ok(Source::External),
-            _          => Err(()),
+            "local"    => Source::Local,
+            "external" => Source::External,
+            _          => panic!("String needs to be either 'local' or 'external'."),
         }
     }
 }
@@ -49,20 +47,6 @@ struct EventModel {
     url: Option<String>,
     image_url: Option<String>,
     participants: Vec<ParticipantModel>
-}
-
-#[derive(Serialize, Deserialize, FromRow)]
-struct DatabaseResult {
-    id: u32,
-    region_id: Option<u32>,
-    title: String,
-    description: Option<String>,
-    reward: i32,
-    source: String,
-    url: Option<String>,
-    image_url: Option<String>,
-    image_srcset: Option<String>,
-    user_id: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -167,6 +151,20 @@ pub async fn all_events(app_state: Data<AppState>, req: HttpRequest) -> HttpResp
     HttpResponse::Ok().json(events)
 }
 
+#[derive(Serialize, Deserialize, FromRow)]
+struct DatabaseResult {
+    id: u32,
+    region_id: Option<u32>,
+    title: String,
+    description: Option<String>,
+    reward: i32,
+    source: String,
+    url: Option<String>,
+    image_url: Option<String>,
+    image_srcset: Option<String>,
+    user_id: Option<u32>,
+}
+
 async fn cached_events(app_state: web::Data<AppState>) -> HttpResponse {
     let results: Vec<DatabaseResult> = sqlx::query_as!(
         DatabaseResult,
@@ -186,7 +184,7 @@ fn convert_results_to_events(results: Vec<DatabaseResult>) -> Vec<EventModel> {
             title: result.title,
             description: result.description,
             reward: result.reward,
-            source: Source::from_str(&result.source).unwrap(),
+            source: Source::from_str(&result.source),
             url: result.url,
             image_url: result.image_url,
             participants: vec![],

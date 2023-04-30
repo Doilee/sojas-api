@@ -1,7 +1,6 @@
-use actix_web::{delete, get, HttpResponse, post, put, web};
+use actix_web::{get, HttpResponse, web};
 use serde::{ Serialize, Deserialize };
 use sqlx::FromRow;
-use sqlx::mysql::MySqlQueryResult;
 use crate::{AppState, Response};
 
 #[derive(Serialize, Deserialize, FromRow)]
