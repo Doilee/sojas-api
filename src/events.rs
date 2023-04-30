@@ -67,10 +67,7 @@ pub async fn cached_events(app_state: web::Data<AppState>) -> HttpResponse {
         "SELECT id, cached_results, user_id FROM events LEFT JOIN participants ON participants.event_id = events.id",
     ).fetch_all(&app_state.pool).await.unwrap();
 
-    HttpResponse::Ok().json(DataResponse {
-        data: convert_results_to_events(results),
-        message: Option::from("Got all cached events.".to_string()),
-    })
+    HttpResponse::Ok().json(convert_results_to_events(results))
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -151,10 +148,7 @@ pub async fn all_events(app_state: Data<AppState>, req: HttpRequest) -> HttpResp
         ).execute(&app_state.pool);
     }
 
-    HttpResponse::Ok().json(DataResponse {
-        data: events,
-        message: Option::from("Got all events.".to_string()),
-    })
+    HttpResponse::Ok().json(events)
 }
 
 async fn fetch_events_from_pink_politiek() -> PinkPolitiekEventsData {
