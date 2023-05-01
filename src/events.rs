@@ -1,4 +1,3 @@
-use std::env;
 use actix_web::{delete, get, HttpRequest, HttpResponse, post, web};
 use actix_web::error::ErrorInternalServerError;
 use actix_web::web::{Data};
@@ -32,7 +31,7 @@ struct ParticipantModel {
 }
 
 #[derive(Serialize, Deserialize, FromRow, Clone)]
-struct EventModel {
+struct Event {
     id: u32,
     region_id: Option<u32>,
     title: String,
@@ -87,11 +86,11 @@ async fn cached_events(app_state: web::Data<AppState>) -> HttpResponse {
     HttpResponse::Ok().json(convert_results_to_events(results))
 }
 
-fn convert_results_to_events(results: Vec<DatabaseResult>) -> Vec<EventModel> {
-    let mut event_map: std::collections::HashMap<u32, EventModel> = std::collections::HashMap::new();
+fn convert_results_to_events(results: Vec<DatabaseResult>) -> Vec<Event> {
+    let mut event_map: std::collections::HashMap<u32, Event> = std::collections::HashMap::new();
 
     for result in results {
-        let event = event_map.entry(result.id).or_insert_with(|| EventModel {
+        let event = event_map.entry(result.id).or_insert_with(|| Event {
             id: result.id,
             region_id: result.region_id,
             title: result.title,

@@ -1,12 +1,10 @@
 use std::env;
-use actix_web::error::ErrorInternalServerError;
 use actix_web::web::Data;
-use futures::TryFutureExt;
 use serde::{Serialize, Deserialize};
 use crate::AppState;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-struct VenueModel {
+struct Venue {
     id: i32,
     url: String,
 
@@ -18,7 +16,7 @@ struct VenueModel {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(untagged)]
 enum PinkPolitiekVenueOrVec {
-    Venue(VenueModel),
+    Venue(Venue),
     Arr([u8; 0])
 }
 
