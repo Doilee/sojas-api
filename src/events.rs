@@ -6,7 +6,7 @@ use sqlx::FromRow;
 use sqlx::mysql::MySqlQueryResult;
 
 use crate::{AppState, Response};
-use crate::jwt::User;
+use crate::users::User;
 
 #[derive(Serialize, Deserialize, Clone, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
@@ -114,7 +114,14 @@ fn convert_results_to_events(results: Vec<DatabaseResult>) -> Vec<Event> {
 pub async fn participate(path: web::Path<u32>, app_state: web::Data<AppState>, user: User) -> HttpResponse {
     let event_id: u32 = path.into_inner();
 
-    //todo: Check if user already participated
+    let Ok(_): Result<_, sqlx::Error> = sqlx::query!(
+        "SELECT * FROM events WHERE id=?",
+        event_id
+    ).fetch_one(&app_state.pool).await else {
+        return HttpResponse::BadRequest().json(Response {
+            message: "Event wasn\'t found.".to_string()
+        });
+    };
 
     let Ok(_created): Result<MySqlQueryResult, sqlx::Error> = sqlx::query!(
         "INSERT INTO participants(event_id, user_id) VALUES(?, ?)",
@@ -141,7 +148,7 @@ pub async fn stop_participating(path: web::Path<u32>, app_state: web::Data<AppSt
         user.id,
     ).execute(&app_state.pool).await else {
         return HttpResponse::InternalServerError().json(Response {
-            message: "Couldn't remove participation.".to_string(),
+            message: "Unable to remove participation (or didn\'t exist).".to_string(),
         });
     };
 
