@@ -124,7 +124,7 @@ pub async fn participate(path: web::Path<u32>, app_state: web::Data<AppState>, u
     };
 
     let Ok(_created): Result<MySqlQueryResult, sqlx::Error> = sqlx::query!(
-        "INSERT INTO participants(event_id, user_id) VALUES(?, ?)",
+        "INSERT INTO participants(event_id, user_id) VALUES(?, ?) AS n ON DUPLICATE KEY UPDATE id=id",
         event_id,
         user.id,
     ).execute(&app_state.pool).await else {
