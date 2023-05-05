@@ -1,9 +1,12 @@
 -- MySQL
 CREATE TABLE IF NOT EXISTS users(
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `name` VARCHAR(255) NOT NULL,
-    soy_balance INT DEFAULT 0 NOT NULL,
-    is_admin BOOLEAN DEFAULT 0 NOT NULL,
+    `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `display_name` VARCHAR(255) NOT NULL,
+    `username` VARCHAR(255) NOT NULL,
+    `email` VARCHAR(255) NOT NULL,
+    `jwt` VARCHAR(255) NOT NULL,
+    `soy_balance` INT DEFAULT 0 NOT NULL,
+    `is_admin` BOOLEAN DEFAULT 0 NOT NULL,
     PRIMARY KEY(id)
 );
 
