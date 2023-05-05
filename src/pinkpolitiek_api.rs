@@ -1,5 +1,7 @@
 use std::env;
+use actix_web::{HttpResponse, web};
 use actix_web::web::Data;
+use reqwest::{Error, Response};
 use serde::{Serialize, Deserialize};
 use crate::AppState;
 
@@ -15,13 +17,13 @@ struct Venue {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(untagged)]
-enum PinkPolitiekVenueOrVec {
+enum PPVenueOrVec {
     Venue(Venue),
     Arr([u8; 0])
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct PinkPolitiekEvent {
+pub struct PPEvent {
     id: i32,
     global_id: String,
     author: String,
@@ -38,18 +40,18 @@ pub struct PinkPolitiekEvent {
     slug: String,
     all_day: bool,
     start_date: String,
-    venue: PinkPolitiekVenueOrVec,
+    venue: PPVenueOrVec,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct PinkPolitiekEventsData {
-    events: Vec<PinkPolitiekEvent>,
+pub struct PPEventsData {
+    events: Vec<PPEvent>,
     rest_url: String,
     total: i32,
     total_pages: i32,
 }
 
-pub async fn get_events(app_state: Data<AppState>) -> Result<Vec<PinkPolitiekEvent>, String> {
+pub async fn get_events(app_state: Data<AppState>) -> Result<Vec<PPEvent>, String> {
     let response = reqwest::get(
         env::var("PINKPOLITIEK_URL").unwrap() + "/tribe/events/v1/events"
     ).await;
@@ -60,7 +62,7 @@ pub async fn get_events(app_state: Data<AppState>) -> Result<Vec<PinkPolitiekEve
 
     let events = response
         .unwrap()
-        .json::<PinkPolitiekEventsData>()
+        .json::<PPEventsData>()
         .await
         .unwrap()
         .events;
@@ -71,7 +73,7 @@ pub async fn get_events(app_state: Data<AppState>) -> Result<Vec<PinkPolitiekEve
     }
 }
 
-async fn store_to_db(app_state: Data<AppState>, events: &Vec<PinkPolitiekEvent>) -> Result<(), String> {
+async fn store_to_db(app_state: Data<AppState>, events: &Vec<PPEvent>) -> Result<(), String> {
     for event in events {
         let result = sqlx::query!(r#"
             INSERT INTO events (id, title, description, source, url)
