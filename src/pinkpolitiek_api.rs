@@ -1,11 +1,9 @@
 use std::env;
-use actix_web::{HttpResponse, web};
 use actix_web::web::Data;
-use reqwest::{Error, Response};
 use serde::{Serialize, Deserialize};
 use crate::AppState;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 struct Venue {
     id: i32,
     url: String,
@@ -15,14 +13,14 @@ struct Venue {
     show_map: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(untagged)]
 enum PPVenueOrVec {
     Venue(Venue),
     Arr([u8; 0])
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PPEvent {
     id: i32,
     global_id: String,
@@ -43,7 +41,7 @@ pub struct PPEvent {
     venue: PPVenueOrVec,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct PPEventsData {
     events: Vec<PPEvent>,
     rest_url: String,
