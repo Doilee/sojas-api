@@ -1,27 +1,12 @@
-use std::env;
 use std::future::Future;
 use std::pin::Pin;
 use actix_web::{Error, FromRequest, HttpRequest};
 use actix_web::error::{ErrorInternalServerError, ErrorUnauthorized};
+use actix_web::web::Data;
 
 use reqwest::header::AUTHORIZATION;
-use reqwest::{Response, StatusCode};
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "snake_case")]
-enum Role {
-    Member,
-    Admin,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct User {
-    pub id: String,
-    first_name: Option<String>,
-    last_name: Option<String>,
-    role: Role,
-}
+use crate::AppState;
+use crate::users::User;
 
 // Implement the FromRequest trait to extract the JWT token from the Authorization header
 impl FromRequest for User {
@@ -42,35 +27,34 @@ impl FromRequest for User {
             .unwrap()
             .replace("Bearer ", "");
 
+        let app_state = req.app_data::<Data<AppState>>().unwrap().to_owned();
+
         Box::pin(async move {
-            match validate_token(&token).await {
-                Ok(response) => {
-                    match response.status() {
-                        StatusCode::OK => {
-                            Ok(User {
-                                id: "1".to_string(),
-                                first_name: Option::from("Matthijs".to_string()),
-                                last_name: Option::from("Dam".to_string()),
-                                role: Role::Member
-                            })
-                        },
-                        _ => {
-                            Err(ErrorUnauthorized("Token invalid."))
-                        }
-                    }
-                },
-                Err(_error) => {
-                    Err(ErrorInternalServerError("Could not validate token."))
-                }
+            match validate_token(&token, &app_state).await {
+                Ok(user) => Ok(user),
+                Err(message) => Err(ErrorInternalServerError(message))
             }
         })
     }
 }
 
-async fn validate_token(token : &str) -> Result<Response, reqwest::Error> {
-    reqwest::Client::new()
-        .post(env::var("PINKPOLITIEK_URL").unwrap() + "/jwt-auth/v1/token/validate")
-        .header(AUTHORIZATION, token)
-        .send()
-        .await
+async fn validate_token(token : &str, app_state: &Data<AppState>) -> Result<User, String> {
+    let Ok(user): Result<User, sqlx::Error> = sqlx::query_as!(
+        User,
+        "SELECT * FROM users WHERE jwt=?",
+        token
+    ).fetch_one(&app_state.pool).await else {
+        return Err("Unauthorized.".to_string())
+    };
+
+    Ok(user)
 }
+
+// Old way, but not removing as it may prove useful in the future
+// async fn validate_token(token : &str) -> Result<Response, reqwest::Error> {
+//     reqwest::Client::new()
+//         .post(env::var("PINKPOLITIEK_URL").unwrap() + "/jwt-auth/v1/token/validate")
+//         .header(AUTHORIZATION, token)
+//         .send()
+//         .await
+// }
