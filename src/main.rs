@@ -34,6 +34,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(web::Data::new(app_state.clone()))
             .service(root)
+            .service(users::login)
             .service(users::get)
             .service(users::get_all)
             .service(events::all_events)

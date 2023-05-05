@@ -1,4 +1,7 @@
-use actix_web::{get, HttpResponse, web};
+use std::env;
+use actix_web::{get, post, HttpResponse, web};
+use actix_web::web::Data;
+use reqwest::{Error, StatusCode};
 use serde::{ Serialize, Deserialize };
 use sqlx::FromRow;
 use crate::{AppState, Response};
@@ -6,9 +9,88 @@ use crate::{AppState, Response};
 #[derive(Serialize, Deserialize, FromRow)]
 struct User {
     id: u32,
-    name: String,
+    display_name: String,
+    username: String,
+    email: String,
     soy_balance: i32,
     is_admin: i8,
+    jwt: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct LoginBody {
+    username: String,
+    password: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct PPLoginResponse {
+    token: String,
+    user_email: String,
+    user_nicename: String,
+    user_display_name: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct PPErrorData {
+    status: i32,
+}
+
+#[derive(Serialize, Deserialize)]
+struct PPErrorResponse {
+    code: String,
+    message: String,
+    data: PPErrorData,
+}
+
+#[post("/login")]
+pub async fn login(body: web::Json<LoginBody>, app_state: web::Data<AppState>) -> HttpResponse {
+    let url = env::var("PINKPOLITIEK_URL").unwrap() + "/jwt-auth/v1/token?username=" + &body.username + "&password=" + &body.password;
+    let client = reqwest::Client::new();
+
+    let res = client
+        .post(&url)
+        .send();
+
+    let Ok(response) = res.await else {
+        return HttpResponse::ServiceUnavailable().json("Something went wrong when connecting with pinkpolitiek.nl.");
+    };
+
+    return match response.status() {
+        StatusCode::OK => {
+            let login_response = response
+                .json::<PPLoginResponse>()
+                .await
+                .unwrap();
+
+
+            match store_to_db(app_state, &login_response).await {
+                Ok(_) => HttpResponse::Ok().json(login_response),
+                Err(message) => HttpResponse::InternalServerError().json(message)
+            }
+        },
+        _ => {
+            HttpResponse::Ok().json(response.json::<PPErrorResponse>().await.unwrap())
+        }
+    };
+}
+
+async fn store_to_db(app_state: Data<AppState>, login_response: &PPLoginResponse) -> Result<(), String> {
+    let result = sqlx::query!(r#"
+         INSERT INTO users (display_name, username, email, jwt) VALUES(?, ?, ?, ?)
+         AS n ON DUPLICATE KEY UPDATE display_name = n.display_name, username = n.username, email = n.email, jwt = n.jwt"#,
+        login_response.user_display_name,
+        login_response.user_nicename,
+        login_response.user_email,
+        login_response.token,
+    ).execute(&app_state.pool).await;
+
+
+    if result.is_err() {
+        return Err("Something went wrong.".to_string())
+    }
+
+    Ok(())
 }
 
 #[get("/users/{id}")]
