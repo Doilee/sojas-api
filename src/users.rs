@@ -1,29 +1,23 @@
 use std::env;
 use actix_web::{get, post, HttpResponse, web};
 use actix_web::web::Data;
-use reqwest::{Error, StatusCode};
+use reqwest::{StatusCode};
 use serde::{ Serialize, Deserialize };
 use sqlx::FromRow;
 use crate::{AppState, Response};
 
 #[derive(Serialize, Deserialize, FromRow)]
-struct User {
-    id: u32,
-    display_name: String,
-    username: String,
-    email: String,
-    soy_balance: i32,
-    is_admin: i8,
-    jwt: String,
+pub struct User {
+    pub id: u32,
+    pub display_name: String,
+    pub username: String,
+    pub email: String,
+    pub soy_balance: i32,
+    pub is_admin: i8,
+    pub jwt: String,
 }
 
-#[derive(Deserialize, Debug)]
-struct LoginBody {
-    username: String,
-    password: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 struct PPLoginResponse {
     token: String,
     user_email: String,
@@ -41,6 +35,12 @@ struct PPErrorResponse {
     code: String,
     message: String,
     data: PPErrorData,
+}
+
+#[derive(Deserialize)]
+pub struct LoginBody {
+    username: String,
+    password: String,
 }
 
 #[post("/login")]
