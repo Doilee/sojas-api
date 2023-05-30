@@ -111,7 +111,7 @@ pub async fn get(path: web::Path<u32>, app_state: web::Data<AppState>) -> HttpRe
 }
 
 #[get("/users")]
-pub async fn get_all(app_state: web::Data<AppState>) -> HttpResponse {
+pub async fn get_all(app_state: web::Data<AppState>, user: User) -> HttpResponse {
     HttpResponse::Ok().json(sqlx::query_as!(
         User,
         "SELECT * FROM users",
