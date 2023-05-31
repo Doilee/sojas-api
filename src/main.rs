@@ -4,9 +4,10 @@ mod jwt;
 mod pinkpolitiek_api;
 
 use std::env;
-use actix_web::{HttpServer, App, HttpResponse, get, web};
+use actix_web::{HttpServer, App, HttpResponse, get, web, http};
 use serde::{ Serialize, Deserialize };
 use sqlx::mysql::{ MySqlPool, MySqlPoolOptions };
+use actix_cors::Cors;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -31,7 +32,15 @@ async fn main() -> std::io::Result<()> {
     let app_state = AppState { pool };
 
     HttpServer::new(move || {
+        let cors = Cors::default()
+              .allowed_origin("http://localhost:5714")
+              .allowed_methods(vec!["GET", "POST"])
+              .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+              .allowed_header(http::header::CONTENT_TYPE)
+              .max_age(3600);
+
         App::new()
+            .wrap(cors)
             .app_data(web::Data::new(app_state.clone()))
             .service(root)
             .service(users::login)
