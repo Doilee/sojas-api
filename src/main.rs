@@ -32,16 +32,11 @@ async fn main() -> std::io::Result<()> {
     let app_state = AppState { pool };
 
     HttpServer::new(move || {
-        let cors = Cors::default()
-              .allowed_origin("http://localhost:5714")
-              .allowed_methods(vec!["GET", "POST"])
-              .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-              .allowed_header(http::header::CONTENT_TYPE)
-              .max_age(3600);
+        let cors = Cors::permissive();
 
         App::new()
-            .wrap(cors)
             .app_data(web::Data::new(app_state.clone()))
+            .wrap(cors)
             .service(root)
             .service(users::login)
             .service(users::get)
@@ -49,7 +44,6 @@ async fn main() -> std::io::Result<()> {
             .service(events::all_events)
             .service(events::participate)
             .service(events::stop_participating)
-            //.service(vents::)
     }).bind(("127.0.0.1", 4000))?
         .run()
         .await
