@@ -32,7 +32,8 @@ async fn main() -> std::io::Result<()> {
     let app_state = AppState { pool };
 
     HttpServer::new(move || {
-        let cors = Cors::permissive();
+        let cors = Cors::permissive()
+              .max_age(3600);
 
         App::new()
             .app_data(web::Data::new(app_state.clone()))
@@ -40,6 +41,7 @@ async fn main() -> std::io::Result<()> {
             .service(root)
             .service(users::login)
             .service(users::get)
+            .service(users::get_me)
             .service(users::get_all)
             .service(events::all_events)
             .service(events::participate)

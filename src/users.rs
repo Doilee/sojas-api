@@ -63,7 +63,6 @@ pub async fn login(body: web::Json<LoginBody>, app_state: web::Data<AppState>) -
                 .await
                 .unwrap();
 
-
             match store_to_db(app_state, &login_response).await {
                 Ok(_) => HttpResponse::Ok().json(login_response),
                 Err(message) => HttpResponse::InternalServerError().json(message)
@@ -107,6 +106,11 @@ pub async fn get(path: web::Path<u32>, app_state: web::Data<AppState>) -> HttpRe
         });
     };
 
+    HttpResponse::Ok().json(user)
+}
+
+#[get("/me")]
+pub async fn get_me(app_state: web::Data<AppState>, user: User) -> HttpResponse {
     HttpResponse::Ok().json(user)
 }
 
