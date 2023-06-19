@@ -5,6 +5,7 @@ use reqwest::{StatusCode};
 use serde::{ Serialize, Deserialize };
 use sqlx::FromRow;
 use crate::{AppState, Response};
+use urlencoding::encode;
 
 #[derive(Serialize, Deserialize, FromRow)]
 pub struct User {
@@ -45,7 +46,10 @@ pub struct LoginBody {
 
 #[post("/login")]
 pub async fn login(body: web::Json<LoginBody>, app_state: web::Data<AppState>) -> HttpResponse {
-    let url = env::var("PINKPOLITIEK_URL").unwrap() + "/jwt-auth/v1/token?username=" + &body.username + "&password=" + &body.password;
+    let url = env::var("PINKPOLITIEK_URL").unwrap() + "/jwt-auth/v1/token?username=" + &encode(&body.username).to_string() + "&password=" + &encode(&body.password).to_string();
+
+    dbg!(&url);
+
     let client = reqwest::Client::new();
 
     let res = client
