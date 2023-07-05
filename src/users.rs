@@ -72,8 +72,11 @@ pub async fn login(body: web::Json<LoginBody>, app_state: web::Data<AppState>) -
                 Err(message) => HttpResponse::InternalServerError().json(message)
             }
         },
+        StatusCode::NOT_FOUND => {
+            HttpResponse::NotFound().json(response.json::<PPErrorResponse>().await.unwrap())
+        },
         _ => {
-            HttpResponse::Ok().json(response.json::<PPErrorResponse>().await.unwrap())
+            HttpResponse::InternalServerError().json(response.json::<PPErrorResponse>().await.unwrap())
         }
     };
 }
