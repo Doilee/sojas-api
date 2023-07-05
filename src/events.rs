@@ -4,6 +4,7 @@ use actix_web::web::{Data};
 use serde::{Serialize, Deserialize};
 use sqlx::FromRow;
 use sqlx::mysql::MySqlQueryResult;
+use chrono::{Utc, NaiveDateTime, Local};
 
 use crate::{AppState, Response};
 use crate::users::User;
@@ -40,6 +41,7 @@ struct Event {
     source: Source,
     url: Option<String>,
     image_url: Option<String>,
+    start_date: NaiveDateTime,
     participants: Vec<ParticipantModel>
 }
 
@@ -74,13 +76,18 @@ struct DatabaseResult {
     url: Option<String>,
     image_url: Option<String>,
     image_srcset: Option<String>,
+    start_date: NaiveDateTime,
+    all_day: i8,
     user_id: Option<u32>,
 }
 
 async fn cached_events(app_state: web::Data<AppState>) -> HttpResponse {
+    let date_as_string = Local::now().to_string();
+
     let results: Vec<DatabaseResult> = sqlx::query_as!(
         DatabaseResult,
-        "SELECT events.*, participants.user_id FROM events LEFT JOIN participants ON participants.event_id = events.id",
+        "SELECT events.*, participants.user_id FROM events LEFT JOIN participants ON participants.event_id = events.id WHERE start_date > ? ORDER BY start_date",
+        date_as_string,
     ).fetch_all(&app_state.pool).await.unwrap();
 
     HttpResponse::Ok().json(convert_results_to_events(results))
@@ -98,6 +105,7 @@ fn convert_results_to_events(results: Vec<DatabaseResult>) -> Vec<Event> {
             reward: result.reward,
             source: Source::from_str(&result.source),
             url: result.url,
+            start_date: result.start_date,
             image_url: result.image_url,
             participants: vec![],
         });
