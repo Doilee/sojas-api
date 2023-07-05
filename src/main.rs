@@ -4,7 +4,7 @@ mod jwt;
 mod pinkpolitiek_api;
 
 use std::env;
-use actix_web::{HttpServer, App, HttpResponse, get, web, http};
+use actix_web::{HttpServer, App, HttpResponse, get, web};
 use serde::{ Serialize, Deserialize };
 use sqlx::mysql::{ MySqlPool, MySqlPoolOptions };
 use actix_cors::Cors;
