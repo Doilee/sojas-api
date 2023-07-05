@@ -6,6 +6,7 @@ use serde::{ Serialize, Deserialize };
 use sqlx::FromRow;
 use crate::{AppState, Response};
 use urlencoding::encode;
+use crate::pinkpolitiek_api::{PPErrorResponse, PPLoginResponse};
 
 #[derive(Serialize, Deserialize, FromRow)]
 pub struct User {
@@ -18,26 +19,6 @@ pub struct User {
     pub jwt: String,
 }
 
-#[derive(Serialize, Deserialize)]
-struct PPLoginResponse {
-    token: String,
-    user_email: String,
-    user_nicename: String,
-    user_display_name: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct PPErrorData {
-    status: i32,
-}
-
-#[derive(Serialize, Deserialize)]
-struct PPErrorResponse {
-    code: String,
-    message: String,
-    data: PPErrorData,
-}
-
 #[derive(Deserialize)]
 pub struct LoginBody {
     username: String,
@@ -47,8 +28,6 @@ pub struct LoginBody {
 #[post("/login")]
 pub async fn login(body: web::Json<LoginBody>, app_state: web::Data<AppState>) -> HttpResponse {
     let url = env::var("PINKPOLITIEK_URL").unwrap() + "/jwt-auth/v1/token?username=" + &encode(&body.username).to_string() + "&password=" + &encode(&body.password).to_string();
-
-    dbg!(&url);
 
     let client = reqwest::Client::new();
 
@@ -81,7 +60,7 @@ pub async fn login(body: web::Json<LoginBody>, app_state: web::Data<AppState>) -
     };
 }
 
-async fn store_to_db(app_state: Data<AppState>, login_response: &PPLoginResponse) -> Result<(), String> {
+pub async fn store_to_db(app_state: Data<AppState>, login_response: &PPLoginResponse) -> Result<(), String> {
     let result = sqlx::query!(r#"
          INSERT INTO users (display_name, username, email, jwt) VALUES(?, ?, ?, ?)
          AS n ON DUPLICATE KEY UPDATE display_name = n.display_name, username = n.username, email = n.email, jwt = n.jwt"#,

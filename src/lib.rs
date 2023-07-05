@@ -6,6 +6,10 @@ pub fn set_env() {
     for var in file.split('\n') {
         let key_value : Vec<&str> = var.split('=').collect();
 
+        if (key_value[0] == "") {
+            break
+        };
+
         env::set_var(key_value[0], key_value[1]);
     }
 }

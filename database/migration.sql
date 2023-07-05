@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS events(
     `reward` INT DEFAULT 150 NOT NULL,
     `source` VARCHAR(255) DEFAULT 'local' NOT NULL, -- or 'external'
     `url` VARCHAR(255),
+    `start_date` DATETIME NOT NULL,
+    `all_day` BOOLEAN DEFAULT 0 NOT NULL,
     `image_url` VARCHAR(255),
     `image_srcset` TEXT,
     PRIMARY KEY(id),
